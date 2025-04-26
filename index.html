@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landmark Creator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #map {
+            height: 500px;
+            width: 80%;
+            margin: auto;
+            border: 2px solid black;
+            border-radius: 8px;
+        }
+        #landmarkList {
+            margin-top: 10px;
+            text-align: left;
+            width: 80%;
+            margin: auto;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Click on the Map to Add Landmarks</h2>
+    <div id="map"></div>
+    
+    <h3>Selected Landmarks</h3>
+    <ul id="landmarkList"></ul>
+    
+    <button onclick="sendLandmarks()">Add Notes</button>
+    <button onclick="sendLandmarks()">Visited Landmarks</button>
+    <button onclick="sendLandmarks()">Create Visiting Plans</button>
+
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        var map = L.map('map').setView([20, 0], 2); // Default global view
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        let landmarks = []; // Store landmarks
+
+        // Add landmark on map click
+        map.on('click', function(e) {
+            var lat = e.latlng.lat.toFixed(6);
+            var lng = e.latlng.lng.toFixed(6);
+            
+            // Create marker
+            var marker = L.marker([lat, lng]).addTo(map)
+                .bindPopup(`Lat: ${lat}, Lng: ${lng}`)
+                .openPopup();
+
+            // Store landmark data
+            landmarks.push({ latitude: lat, longitude: lng });
+            updateLandmarkList();
+        });
+
+        // Update landmark list in UI
+        function updateLandmarkList() {
+            let list = document.getElementById('landmarkList');
+            list.innerHTML = "";
+            landmarks.forEach((point, index) => {
+                let li = document.createElement('li');
+                li.textContent = `Landmark ${index + 1}: Lat ${point.latitude}, Lng ${point.longitude}`;
+                list.appendChild(li);
+            });
+        }
+
+        // Send landmarks to backend
+        function sendLandmarks() {
+            if (landmarks.length === 0) {
+                alert("No landmarks selected!");
+                return;
+            }
+
+            fetch('http://localhost:5000/api/landmarks', { // Replace with actual backend URL
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ landmarks: landmarks })
+            })
+            .then(response => response.json())
+            .then(data => alert("Data sent successfully: " + JSON.stringify(data)))
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+
+</body>
+</html>

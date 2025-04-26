@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Landmark Tracker</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- Auth Container - Initially Shown -->
+    <div id="authContainer" class="container">
+      <div class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="auth-card shadow">
+            <div class="auth-header">
+              <i class="fas fa-map-marked-alt fa-3x text-primary mb-3"></i>
+              <h2 class="auth-title">Landmark Tracker</h2>
+              <p class="auth-subtitle">Sign in to track your landmarks</p>
+            </div>
+
+            <!-- Auth Tabs -->
+            <ul class="nav nav-tabs nav-justified" id="authTabs">
+              <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#loginTab"
+                  >Login</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#registerTab"
+                  >Register</a
+                >
+              </li>
+            </ul>
+
+            <!-- Auth Tab Content -->
+            <div class="auth-body">
+              <div class="tab-content">
+                <!-- Login Tab -->
+                <div class="tab-pane fade show active" id="loginTab">
+                  <form id="loginForm" class="auth-form">
+                    <div class="mb-4">
+                      <label for="loginUsername" class="form-label">
+                        <i class="fas fa-user me-2"></i>Username
+                      </label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="loginUsername"
+                        placeholder="Enter your username"
+                        required
+                      />
+                    </div>
+                    <div class="mb-4">
+                      <label for="loginPassword" class="form-label">
+                        <i class="fas fa-lock me-2"></i>Password
+                      </label>
+                      <input
+                        type="password"
+                        class="form-control"
+                        id="loginPassword"
+                        placeholder="Enter your password"
+                        required
+                      />
+                    </div>
+                    <div class="d-grid gap-2 mt-4">
+                      <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                      </button>
+                    </div>
+                    <div
+                      id="loginError"
+                      class="auth-error alert alert-danger mt-3"
+                      style="display: none"
+                    ></div>
+                  </form>
+                </div>
+
+                <!-- Register Tab -->
+                <div class="tab-pane fade" id="registerTab">
+                  <form id="registerForm" class="auth-form">
+                    <div class="mb-3">
+                      <label for="registerUsername" class="form-label">
+                        <i class="fas fa-user me-2"></i>Username
+                      </label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="registerUsername"
+                        placeholder="Choose a username"
+                        required
+                      />
+                    </div>
+                    <div class="mb-3">
+                      <label for="registerEmail" class="form-label">
+                        <i class="fas fa-envelope me-2"></i>Email
+                      </label>
+                      <input
+                        type="email"
+                        class="form-control"
+                        id="registerEmail"
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
+                    <div class="mb-4">
+                      <label for="registerPassword" class="form-label">
+                        <i class="fas fa-lock me-2"></i>Password
+                      </label>
+                      <input
+                        type="password"
+                        class="form-control"
+                        id="registerPassword"
+                        placeholder="Choose a password"
+                        required
+                      />
+                      <small class="form-text text-muted mt-2"
+                        >Password must be at least 6 characters long</small
+                      >
+                    </div>
+                    <div class="d-grid gap-2 mt-4">
+                      <button type="submit" class="btn btn-success">
+                        <i class="fas fa-user-plus me-2"></i>Create Account
+                      </button>
+                    </div>
+                    <div
+                      id="registerError"
+                      class="auth-error alert alert-danger mt-3"
+                      style="display: none"
+                    ></div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main App Container - Initially Hidden -->
+    <div id="appContainer" class="container" style="display: none">
+      <!-- Top Welcome Notification -->
+      <div id="welcomePopup" class="top-welcome-notification">
+        <div class="welcome-popup-content">
+          <i class="fas fa-smile welcome-icon-small"></i>
+          <span class="welcome-message-small"
+            >Welcome back, <span id="welcomeUsername"></span>!</span
+          >
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title">Landmark Tracker</h1>
+        <div class="user-info">
+          <div class="username-container">
+            <div class="user-avatar">
+              <i class="fas fa-user"></i>
+            </div>
+            <span id="usernameDisplay"></span>
+          </div>
+          <button id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+          <a
+            class="nav-link active"
+            id="my-landmarks-tab"
+            data-bs-toggle="tab"
+            href="#my-landmarks"
+            >My Landmarks</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            id="visited-tab"
+            data-bs-toggle="tab"
+            href="#visited"
+            >Visited</a
+          >
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="plans-tab" data-bs-toggle="tab" href="#plans"
+            >Plans</a
+          >
+        </li>
+      </ul>
+
+      <!-- Map Container -->
+      <div id="map" class="map-container"></div>
+
+      <!-- Selected Location Display -->
+      <div
+        id="selectedLocation"
+        class="selected-location"
+        style="display: none"
+      >
+        <h5>Selected Location</h5>
+        <p id="locationDetails"></p>
+      </div>
+
+      <!-- Success Toast -->
+      <div
+        class="toast align-items-center text-white bg-success border-0"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        id="successToast"
+      >
+        <div class="d-flex">
+          <div class="toast-body">Landmark successfully added!</div>
+          <button
+            type="button"
+            class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+          ></button>
+        </div>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+        <!-- My Landmarks Tab -->
+        <div class="tab-pane fade show active" id="my-landmarks">
+          <button
+            class="btn btn-primary mt-3 mb-3"
+            onclick="showAddLandmarkModal()"
+          >
+            <i class="fas fa-plus"></i> Add New Landmark
+          </button>
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"
+                  ><i class="fas fa-search"></i
+                ></span>
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  id="searchLandmark"
+                  placeholder="Search landmarks..."
+                  aria-label="Search"
+                />
+                <button
+                  class="btn btn-outline-secondary btn-sm"
+                  type="button"
+                  id="searchButton"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <select class="form-select form-select-sm" id="categoryFilter">
+                <option value="all">All Categories</option>
+                <option value="historical">Historical</option>
+                <option value="natural">Natural</option>
+                <option value="cultural">Cultural</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="landmarks-grid" id="landmarkList"></div>
+        </div>
+
+        <!-- Visited Tab -->
+        <div class="tab-pane fade" id="visited">
+          <div id="visitedList"></div>
+        </div>
+
+        <!-- Plans Tab -->
+        <div class="tab-pane fade" id="plans">
+          <button
+            class="btn btn-primary mt-3 mb-3"
+            onclick="showAddPlanModal()"
+          >
+            <i class="fas fa-plus"></i> Create New Plan
+          </button>
+          <div class="landmarks-grid" id="plansList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add/Edit Landmark Modal -->
+    <div class="modal fade" id="landmarkModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="landmarkModalTitle">
+              Add New Landmark
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="landmarkForm">
+              <input type="hidden" id="landmarkId" />
+              <div class="mb-3">
+                <label class="form-label">Name</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="landmarkName"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Location</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="landmarkLocation"
+                  readonly
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Category</label>
+                <select class="form-control" id="landmarkCategory">
+                  <option value="historical">Historical</option>
+                  <option value="natural">Natural</option>
+                  <option value="cultural">Cultural</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea
+                  class="form-control"
+                  id="landmarkDescription"
+                ></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" id="landmarkNotes"></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button type="button" class="btn btn-primary" id="saveLandmarkBtn">
+              Save Landmark
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Record Visit Modal -->
+    <div class="modal fade" id="visitModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="visitModalTitle">Record Visit</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="visitForm">
+              <input type="hidden" id="visitId" />
+              <input type="hidden" id="visitLandmarkId" />
+              <div class="mb-3">
+                <label class="form-label">Visitor Name</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="visitorName"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Visit Date</label>
+                <input
+                  type="date"
+                  class="form-control"
+                  id="visitDate"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Rating</label>
+                <div class="star-rating">
+                  <i class="fas fa-star star" data-rating="1"></i>
+                  <i class="fas fa-star star" data-rating="2"></i>
+                  <i class="fas fa-star star" data-rating="3"></i>
+                  <i class="fas fa-star star" data-rating="4"></i>
+                  <i class="fas fa-star star" data-rating="5"></i>
+                  <input type="hidden" id="visitRating" value="5" />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" id="visitNotes"></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button type="button" class="btn btn-primary" id="saveVisitBtn">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visit Details Modal -->
+    <div class="modal fade" id="visitDetailsModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Visit Details</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body" id="visitDetailsContent">
+            <!-- Visit details will be dynamically added here -->
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button type="button" class="btn btn-warning" onclick="editVisit()">
+              Edit
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              onclick="deleteVisit()"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan Modal -->
+    <div class="modal fade" id="planModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="planModalTitle">Create New Plan</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="planForm">
+              <input type="hidden" id="planId" />
+              <div class="mb-3">
+                <label class="form-label">Plan Name</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="planName"
+                  required
+                />
+              </div>
+              <div class="row mb-3">
+                <div class="col">
+                  <label class="form-label">Start Date</label>
+                  <input
+                    type="date"
+                    class="form-control"
+                    id="planStartDate"
+                    required
+                  />
+                </div>
+                <div class="col">
+                  <label class="form-label">End Date</label>
+                  <input
+                    type="date"
+                    class="form-control"
+                    id="planEndDate"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Plan Notes</label>
+                <textarea
+                  class="form-control"
+                  id="planNotes"
+                  rows="2"
+                  placeholder="General notes for the plan"
+                ></textarea>
+              </div>
+
+              <!-- Select Landmarks Section -->
+              <div class="mb-3">
+                <label class="form-label mb-2"
+                  >Select Landmarks and Add Notes</label
+                >
+                <div
+                  id="landmarkCheckboxes"
+                  class="landmarks-selection-container"
+                >
+                  <!-- Landmarks will be dynamically added here -->
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button type="button" class="btn btn-primary" id="savePlanBtn">
+              Save Plan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan Details Modal -->
+    <div class="modal fade" id="planDetailsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Plan Details</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body" id="planDetailsContent">
+            <!-- Plan details will be dynamically added here -->
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/auth.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>
