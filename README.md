@@ -1,12 +1,19 @@
 Project live link: https://landmark-tracker-app.onrender.com/
 
 ![Ekran görüntüsü 2025-04-27 132347](https://github.com/user-attachments/assets/5a5cf30f-188b-4f6e-8d8e-26d26f07874d)
+
 ![Ekran görüntüsü 2025-04-27 133006](https://github.com/user-attachments/assets/dff9aec7-3bb8-4429-b854-853ce77180d3)
+
 ![Ekran görüntüsü 2025-04-27 133208](https://github.com/user-attachments/assets/83fc0f0f-cb42-432b-a439-7cc1b6885645)
+
 ![Ekran görüntüsü 2025-04-27 133459](https://github.com/user-attachments/assets/befc66e7-cb1c-43e2-a837-138505ef6ec8)
+
 ![Ekran görüntüsü 2025-04-27 133533](https://github.com/user-attachments/assets/861a0b14-ab76-47bc-baaf-629407ee0e44)
+
 ![Ekran görüntüsü 2025-04-27 133727](https://github.com/user-attachments/assets/79517d68-ae57-41e2-bf6e-2a0bb4fbe2ab)
+
 ![Ekran görüntüsü 2025-04-27 134123](https://github.com/user-attachments/assets/e4d08e68-ba79-4116-9af4-27885b564eb3)
+
 ![Ekran görüntüsü 2025-04-27 134234](https://github.com/user-attachments/assets/9070a3ca-d303-4b5a-8322-94ff8f6ea645)
 
 # Landmark Tracker App
