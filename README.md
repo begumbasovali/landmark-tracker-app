@@ -9,6 +9,7 @@ A web application for tracking landmarks, recording visits, and planning future 
 - Add notes and descriptions to landmarks
 - Track visited landmarks
 - Create future visit plans
+- User authentication and personalized content
 - Responsive design for both desktop and mobile use
 
 ## Project Structure
@@ -25,11 +26,13 @@ landmark-tracker-app/
 │   └── auth.js             # Authentication middleware
 ├── models/                 # Database models
 │   ├── Landmark.js         # Landmark data model
+│   ├── Plan.js             # Plan data model
 │   ├── User.js             # User data model
 │   └── VisitedLandmark.js  # Visited landmark data model
 ├── routes/                 # API routes
 │   ├── auth.js             # Authentication routes
 │   ├── landmarks.js        # Landmark management routes
+│   ├── plans.js            # Plan management routes
 │   └── visited.js          # Visited landmarks routes
 ├── index.html              # Simple landmark creator HTML (legacy)
 ├── server.js               # Express server setup
@@ -66,6 +69,7 @@ Create a `.env` file in the root directory with your MongoDB connection details:
 ```
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority
 PORT=5000
+JWT_SECRET=your_jwt_secret_key
 ```
 
 Replace `<username>`, `<password>`, `<cluster>`, and `<database>` with your MongoDB Atlas credentials.
@@ -117,7 +121,7 @@ To deploy the application:
 
 1. Push your code to your hosting provider (Heroku, Vercel, Netlify, etc.)
 2. Make sure your hosting provider supports Node.js
-3. Set your environment variables (MongoDB URI, etc.)
+3. Set your environment variables (MongoDB URI, JWT_SECRET, etc.)
 4. The application will automatically detect the environment and use the appropriate API URLs
 
 ## Using the Application
@@ -135,6 +139,16 @@ To deploy the application:
    - Track your visited landmarks
    - Organize your future visit plans
 
+## User-Specific Content
+
+Each user can only view and manage their own content:
+
+- Landmarks created by the user
+- Visits recorded by the user
+- Plans created by the user
+
+This ensures privacy and a personalized experience for each user.
+
 ## API Endpoints
 
 ### Authentication
@@ -145,7 +159,7 @@ To deploy the application:
 
 ### Landmarks
 
-- `GET /api/landmarks` - Get all landmarks
+- `GET /api/landmarks` - Get all landmarks for the authenticated user
 - `GET /api/landmarks/:id` - Get specific landmark
 - `POST /api/landmarks` - Create new landmark
 - `PUT /api/landmarks/:id` - Update landmark
@@ -153,11 +167,19 @@ To deploy the application:
 
 ### Visited Landmarks
 
-- `GET /api/visited` - Get all visited landmarks
+- `GET /api/visited` - Get all visited landmarks for the authenticated user
 - `GET /api/visited/:id` - Get specific visit record
 - `POST /api/visited` - Record a new visit
 - `PUT /api/visited/:id` - Update visit record
 - `DELETE /api/visited/:id` - Delete visit record
+
+### Plans
+
+- `GET /api/plans` - Get all plans for the authenticated user
+- `GET /api/plans/:id` - Get specific plan
+- `POST /api/plans` - Create new plan
+- `PUT /api/plans/:id` - Update plan
+- `DELETE /api/plans/:id` - Delete plan
 
 ## Technologies Used
 
@@ -181,10 +203,12 @@ To deploy the application:
 - If the map doesn't load, check your internet connection as it requires loading the Leaflet.js library
 - If login fails, verify your MongoDB connection string in the `.env` file
 - If API calls fail after deployment, check your server logs and verify that the Dynamic API configuration is working correctly
+- If you don't see your content, make sure you're logged in with the correct account
 
 ## Development Notes
 
 - This project was last updated on April 27, 2025
 - The application is designed to work on modern web browsers with JavaScript enabled
 - The app now uses dynamic API URLs for seamless deployment to any environment
+- User-specific content filtering ensures privacy and data separation between users
 - For additional project references, check the projectlink.txt file
