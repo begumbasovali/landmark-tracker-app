@@ -904,7 +904,7 @@ document
 // Edit visit
 async function editVisit(visitId) {
   try {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${window.appConfig.endpoints.visited}/${visitId}`
     );
     if (!response.ok) throw new Error("Failed to fetch visit details");

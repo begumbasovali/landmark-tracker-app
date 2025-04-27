@@ -6,6 +6,11 @@ const visitedLandmarkSchema = new mongoose.Schema({
         ref: 'Landmark',
         required: true
     },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     visited_date: {
         type: Date,
         default: Date.now
@@ -26,4 +31,4 @@ const visitedLandmarkSchema = new mongoose.Schema({
     }
 });
 
-module.exports = mongoose.model('VisitedLandmark', visitedLandmarkSchema); 
+module.exports = mongoose.model('VisitedLandmark', visitedLandmarkSchema);
