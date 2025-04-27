@@ -648,7 +648,7 @@ function toggleNotes(notesId) {
 // Show landmark details in a modal
 async function showLandmarkDetails(landmarkId) {
   try {
-    const response = await fetch(
+    const response = await fetchWithAuth(
       `${window.appConfig.endpoints.landmarks}/${landmarkId}`
     );
     if (!response.ok) throw new Error("Failed to fetch landmark details");
@@ -743,7 +743,7 @@ async function showLandmarkDetails(landmarkId) {
 
 async function editLandmark(id) {
   try {
-    const response = await fetch(`${window.appConfig.endpoints.landmarks}/${id}`);
+    const response = await fetchWithAuth(`${window.appConfig.endpoints.landmarks}/${id}`);
     if (!response.ok) throw new Error("Failed to fetch landmark");
 
     const landmark = await response.json();
@@ -773,7 +773,7 @@ async function deleteLandmark(id) {
   if (!confirm("Are you sure you want to delete this landmark?")) return;
 
   try {
-    const response = await fetch(`${window.appConfig.endpoints.landmarks}/${id}`, {
+    const response = await fetchWithAuth(`${window.appConfig.endpoints.landmarks}/${id}`, {
       method: "DELETE",
     });
 
@@ -943,7 +943,7 @@ async function editVisit(visitId) {
 
 async function loadLandmarks() {
   try {
-    const response = await fetch(window.appConfig.endpoints.landmarks);
+    const response = await fetchWithAuth(window.appConfig.endpoints.landmarks);
     if (!response.ok) throw new Error("Failed to load landmarks");
 
     const landmarks = await response.json();
@@ -960,7 +960,7 @@ async function loadLandmarks() {
 
 async function loadVisitedLandmarks() {
   try {
-    const response = await fetch(window.appConfig.endpoints.visited);
+    const response = await fetchWithAuth(window.appConfig.endpoints.visited);
     if (!response.ok) throw new Error("Failed to load visited landmarks");
 
     const visited = await response.json();
@@ -1164,7 +1164,7 @@ function showAddPlanModal() {
 
 async function loadLandmarksForPlan() {
   try {
-    const response = await fetch(window.appConfig.endpoints.landmarks);
+    const response = await fetchWithAuth(window.appConfig.endpoints.landmarks);
     if (!response.ok) throw new Error("Failed to load landmarks");
 
     const landmarks = await response.json();
