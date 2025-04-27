@@ -1,9 +1,10 @@
-// Initialize map
-const map = L.map("map").setView([39, 35], 6); // Centered on Turkey
+// Initialize map - this will now be done lazily using a function
+let map = null;
 let selectedLocation = null;
 let markers = [];
 let currentLandmark = null;
 let locationMarker = null;
+let mapInitialized = false;
 
 // Initialize Bootstrap components
 const landmarkModal = new bootstrap.Modal(
@@ -21,9 +22,48 @@ const successToast = new bootstrap.Toast(
   document.getElementById("successToast")
 );
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "&copy; OpenStreetMap contributors",
-}).addTo(map);
+// Function to initialize map (called only once)
+function initMap() {
+  if (mapInitialized) return;
+  
+  console.log("Initializing map...");
+  map = L.map("map").setView([39, 35], 6); // Centered on Turkey
+  
+  // Use a faster tile server and preload nearby tiles
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    keepBuffer: 4, // Keep more tiles in memory
+    updateWhenIdle: true, // Update tiles only when user stops moving
+  }).addTo(map);
+
+  // Map click handler to select location
+  map.on("click", function (e) {
+    selectedLocation = e.latlng;
+
+    // Remove previous location marker if exists
+    if (locationMarker) {
+      map.removeLayer(locationMarker);
+    }
+
+    // Add new location marker
+    locationMarker = L.marker(e.latlng, {
+      icon: L.divIcon({
+        className: "location-marker",
+        html: '<div class="location-marker-inner"></div>',
+        iconSize: [20, 20],
+      }),
+    }).addTo(map);
+
+    document.getElementById("selectedLocation").style.display = "block";
+    document.getElementById(
+      "locationDetails"
+    ).textContent = `Latitude: ${e.latlng.lat.toFixed(
+      6
+    )}, Longitude: ${e.latlng.lng.toFixed(6)}`;
+  });
+  
+  mapInitialized = true;
+}
 
 // Check login status when page loads
 document.addEventListener("DOMContentLoaded", async function () {
@@ -394,32 +434,6 @@ async function reloadLandmarks() {
   }
 }
 
-// Map click handler
-map.on("click", function (e) {
-  selectedLocation = e.latlng;
-
-  // Remove previous location marker if exists
-  if (locationMarker) {
-    map.removeLayer(locationMarker);
-  }
-
-  // Add new location marker
-  locationMarker = L.marker(e.latlng, {
-    icon: L.divIcon({
-      className: "location-marker",
-      html: '<div class="location-marker-inner"></div>',
-      iconSize: [20, 20],
-    }),
-  }).addTo(map);
-
-  document.getElementById("selectedLocation").style.display = "block";
-  document.getElementById(
-    "locationDetails"
-  ).textContent = `Latitude: ${e.latlng.lat.toFixed(
-    6
-  )}, Longitude: ${e.latlng.lng.toFixed(6)}`;
-});
-
 // Show add landmark modal
 function showAddLandmarkModal() {
   if (!selectedLocation) {
@@ -517,25 +531,43 @@ document
   });
 
 function addMarkerToMap(landmark) {
+  // Create a rich popup with more details
+  const popupContent = `
+    <div class="landmark-popup">
+      <h4>${landmark.name}</h4>
+      <div class="popup-detail">
+        <strong>Category:</strong> ${landmark.category}
+      </div>
+      ${landmark.description ? 
+        `<div class="popup-detail">
+          <strong>Description:</strong> ${landmark.description}
+        </div>` : ''}
+      <div class="popup-detail">
+        <strong>Location:</strong> ${landmark.location.latitude.toFixed(6)}, ${landmark.location.longitude.toFixed(6)}
+      </div>
+      ${landmark.notes && landmark.notes.length > 0 ? 
+        `<div class="popup-detail">
+          <strong>Notes:</strong> ${landmark.notes[0].content}
+        </div>` : ''}
+    </div>
+  `;
+
   const marker = L.marker([
     landmark.location.latitude,
     landmark.location.longitude,
-  ]).addTo(map).bindPopup(`
-            <b>${landmark.name}</b><br>
-            Category: ${landmark.category}<br>
-            ${landmark.description}
-        `);
+  ]).addTo(map).bindPopup(popupContent);
 
-  // Add hover functionality
-  marker.on("mouseover", function () {
+  // Always show popup on hover
+  marker.on("mouseover", function() {
     this.openPopup();
   });
 
-  marker.on("mouseout", function () {
+  marker.on("mouseout", function() {
     this.closePopup();
   });
 
-  markers.push({ id: landmark._id, marker });
+  // Store the marker with the landmark name for reference
+  markers.push({ id: landmark._id, marker, name: landmark.name });
 }
 
 function updateMarker(landmark) {
@@ -944,11 +976,24 @@ async function editVisit(visitId) {
 
 async function loadLandmarks() {
   try {
+    // Make sure the map is initialized first
+    if (!mapInitialized) {
+      initMap();
+    }
+    
     const response = await fetchWithAuth(window.appConfig.endpoints.landmarks);
     if (!response.ok) throw new Error("Failed to load landmarks");
 
     const landmarks = await response.json();
     document.getElementById("landmarkList").innerHTML = "";
+    
+    // Clear existing markers before adding new ones
+    if (markers.length > 0) {
+      markers.forEach((marker) => map.removeLayer(marker.marker));
+      markers = [];
+    }
+    
+    // Add landmarks to list and map
     landmarks.reverse().forEach((landmark) => {
       addMarkerToMap(landmark);
       addLandmarkToList(landmark);
@@ -959,8 +1004,14 @@ async function loadLandmarks() {
   }
 }
 
+// Update the loadVisitedLandmarks function to ensure map persistence
 async function loadVisitedLandmarks() {
   try {
+    // Make sure the map is initialized first
+    if (!mapInitialized) {
+      initMap();
+    }
+    
     const response = await fetchWithAuth(window.appConfig.endpoints.visited);
     if (!response.ok) throw new Error("Failed to load visited landmarks");
 
@@ -1033,25 +1084,41 @@ async function loadVisitedLandmarks() {
       .join("");
 
     // Update markers on map
-    markers.forEach((marker) => map.removeLayer(marker.marker));
-    markers = [];
+    if (markers.length > 0) {
+      markers.forEach((marker) => map.removeLayer(marker.marker));
+      markers = [];
+    }
 
     visited.forEach((visit) => {
       const landmark = visit.landmark_id;
       const marker = L.marker([
         landmark.location.latitude,
         landmark.location.longitude,
-      ]).addTo(map).bindPopup(`
-                    <b>${landmark.name}</b><br>
-                    Category: ${landmark.category}<br>
-                    Rating: ${"★".repeat(visit.rating)}${"☆".repeat(
-        5 - visit.rating
-      )}<br>
-                    Visited: ${new Date(
-                      visit.visited_date
-                    ).toLocaleDateString()}
-                `);
+      ]).addTo(map);
+      
+      // Create a richer popup with more information and better styling
+      const popupContent = `
+        <div class="landmark-popup">
+          <h4>${landmark.name}</h4>
+          <div class="popup-detail">
+            <strong>Category:</strong> ${landmark.category}
+          </div>
+          <div class="popup-detail">
+            <strong>Rating:</strong> ${"★".repeat(visit.rating)}${"☆".repeat(5 - visit.rating)}
+          </div>
+          <div class="popup-detail">
+            <strong>Visited:</strong> ${new Date(visit.visited_date).toLocaleDateString()}
+          </div>
+          <div class="popup-detail">
+            <strong>Visitor:</strong> ${visit.visitor_name}
+          </div>
+          ${visit.notes ? `<div class="popup-detail"><strong>Notes:</strong> ${visit.notes}</div>` : ''}
+        </div>
+      `;
+      
+      marker.bindPopup(popupContent);
 
+      // Always open popup on hover
       marker.on("mouseover", function () {
         this.openPopup();
       });
@@ -1060,7 +1127,7 @@ async function loadVisitedLandmarks() {
         this.closePopup();
       });
 
-      markers.push({ id: landmark._id, marker });
+      markers.push({ id: landmark._id, marker, name: landmark.name });
     });
   } catch (error) {
     console.error("Error loading visited landmarks:", error);
@@ -1306,6 +1373,11 @@ document
 
 async function loadPlans() {
   try {
+    // Make sure the map is initialized first
+    if (!mapInitialized) {
+      initMap();
+    }
+    
     const response = await fetchWithAuth(window.appConfig.endpoints.plans);
 
     if (!response.ok) {
@@ -1316,6 +1388,75 @@ async function loadPlans() {
 
     const plans = await response.json();
     const plansList = document.getElementById("plansList");
+    
+    // Clear existing markers before adding plan landmarks to the map
+    if (markers.length > 0) {
+      markers.forEach((marker) => map.removeLayer(marker.marker));
+      markers = [];
+    }
+    
+    // Add all plan landmarks to the map
+    let allPlanLandmarks = [];
+    plans.forEach(plan => {
+      plan.landmarks.forEach(item => {
+        if (item.landmark_id && !allPlanLandmarks.some(l => l._id === item.landmark_id._id)) {
+          allPlanLandmarks.push(item.landmark_id);
+        }
+      });
+    });
+    
+    // Add markers for plan landmarks
+    allPlanLandmarks.forEach(landmark => {
+      // Create marker with plan-specific styling
+      const marker = L.marker([
+        landmark.location.latitude,
+        landmark.location.longitude,
+      ], {
+        icon: L.divIcon({
+          className: 'plan-landmark-marker',
+          html: '<div class="plan-marker-inner"></div>',
+          iconSize: [24, 24]
+        })
+      }).addTo(map);
+      
+      // Create a rich popup for the plan landmark
+      const popupContent = `
+        <div class="landmark-popup plan-popup">
+          <h4>${landmark.name}</h4>
+          <div class="popup-detail">
+            <strong>Category:</strong> ${landmark.category}
+          </div>
+          <div class="popup-detail">
+            <strong>In Plans:</strong> ${plans
+              .filter(p => p.landmarks.some(l => l.landmark_id._id === landmark._id))
+              .map(p => p.name)
+              .join(", ")}
+          </div>
+          ${landmark.description ? 
+            `<div class="popup-detail">
+              <strong>Description:</strong> ${landmark.description}
+            </div>` : ''}
+          <div class="popup-detail">
+            <strong>Location:</strong> ${landmark.location.latitude.toFixed(6)}, ${landmark.location.longitude.toFixed(6)}
+          </div>
+        </div>
+      `;
+      
+      marker.bindPopup(popupContent);
+      
+      // Show popup on hover
+      marker.on("mouseover", function() {
+        this.openPopup();
+      });
+      
+      marker.on("mouseout", function() {
+        this.closePopup();
+      });
+      
+      markers.push({ id: landmark._id, marker, name: landmark.name });
+    });
+    
+    // Now render the plans list
     plansList.innerHTML = plans
       .map((plan) => {
         try {
