@@ -18,6 +18,7 @@ landmark-tracker-app/
 ├── public/                 # Static files served to the client
 │   ├── app.js              # Main application JavaScript
 │   ├── auth.js             # Authentication JavaScript
+│   ├── config.js           # Dynamic API configuration
 │   ├── index.html          # Main application HTML
 │   └── styles.css          # Application styles
 ├── middleware/             # Express middleware
@@ -76,6 +77,7 @@ This project follows a modular architecture:
 - **Server**: The main Express.js server in `server.js` handles API requests and serves static files
 - **Authentication**: JWT-based authentication is implemented in the middleware and routes
 - **Database Models**: Mongoose models define the data structure
+- **Dynamic API**: The `config.js` file automatically detects the environment and configures API URLs accordingly
 - **Frontend Interface**: The application has two interfaces:
   - `index.html` in the root directory: A simple standalone landmark creator
   - `public/index.html`: The fully featured application with authentication
@@ -103,6 +105,20 @@ Open your browser and navigate to:
 ```
 http://localhost:5000
 ```
+
+## Deployment
+
+The application is designed to be easily deployed to any hosting service:
+
+1. **Local Development**: When running locally, the app uses `http://localhost:5000/api` for API calls
+2. **Production**: When deployed, the app automatically uses the server's domain for API calls
+
+To deploy the application:
+
+1. Push your code to your hosting provider (Heroku, Vercel, Netlify, etc.)
+2. Make sure your hosting provider supports Node.js
+3. Set your environment variables (MongoDB URI, etc.)
+4. The application will automatically detect the environment and use the appropriate API URLs
 
 ## Using the Application
 
@@ -164,9 +180,11 @@ http://localhost:5000
 - If you encounter CORS issues, make sure the server is running and configured correctly
 - If the map doesn't load, check your internet connection as it requires loading the Leaflet.js library
 - If login fails, verify your MongoDB connection string in the `.env` file
+- If API calls fail after deployment, check your server logs and verify that the Dynamic API configuration is working correctly
 
 ## Development Notes
 
-- This project was last updated on April 2025
+- This project was last updated on April 27, 2025
 - The application is designed to work on modern web browsers with JavaScript enabled
+- The app now uses dynamic API URLs for seamless deployment to any environment
 - For additional project references, check the projectlink.txt file
