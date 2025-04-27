@@ -211,10 +211,18 @@ function initializeApp() {
 
 // Add auth header to fetch calls
 async function fetchWithAuth(url, options = {}) {
+  // Tüm isteklerin auth token'ına sahip olmasını sağlayalım
   const headers = {
     ...(options.headers || {}),
-    ...AuthService.getAuthHeaders(),
+    "x-auth-token": AuthService.getToken(),
+    "Content-Type": "application/json"
   };
+
+  // Debug amaçlı log
+  console.log(`API isteği: ${url}`, {
+    headers: headers,
+    token: AuthService.getToken().substring(0, 15) + "..." // Token'ın bir kısmını göster
+  });
 
   const response = await fetch(url, {
     ...options,
@@ -273,16 +281,9 @@ function initSearchAndFilter() {
         landmark.description.toLowerCase().includes(searchTerm);
 
       // Category filter
-      let categoryMatch = false;
-      if (category === "all") {
-        categoryMatch = true;
-      } else if (category === "other") {
-        // Other kategorisi için historical, cultural veya natural olmayan landmarkları göster
-        categoryMatch = !["historical", "cultural", "natural"].includes(
-          landmark.category
-        );
-      } else {
-        // Diğer kategoriler için normal eşleştirme yap
+      let categoryMatch = true; // Varsayılan olarak tümünü göster
+      if (category !== "all") {
+        // Kategori filtresi varsa kontrol et
         categoryMatch = landmark.category === category;
       }
 
@@ -879,7 +880,7 @@ document
         ? `${window.appConfig.endpoints.visited}/${visitId}`
         : window.appConfig.endpoints.visited;
 
-      const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: visitId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1129,12 +1130,9 @@ async function deleteVisit(visitId) {
   if (!confirm("Are you sure you want to delete this visit record?")) return;
 
   try {
-    const response = await fetch(
-      `${window.appConfig.endpoints.visited}/${visitId}`,
-      {
-        method: "DELETE",
-      }
-    );
+    const response = await fetchWithAuth(`${window.appConfig.endpoints.visited}/${visitId}`, {
+      method: "DELETE",
+    });
 
     if (!response.ok) throw new Error("Failed to delete visit record");
 
@@ -1279,7 +1277,7 @@ document
         ? `${window.appConfig.endpoints.plans}/${planId}`
         : window.appConfig.endpoints.plans;
 
-      const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: planId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1438,7 +1436,7 @@ async function loadPlans() {
 
 async function showPlanDetails(planId) {
   try {
-    const response = await fetch(`${window.appConfig.endpoints.plans}/${planId}`);
+    const response = await fetchWithAuth(`${window.appConfig.endpoints.plans}/${planId}`);
     if (!response.ok) throw new Error("Failed to fetch plan details");
 
     const plan = await response.json();
@@ -1520,7 +1518,7 @@ async function showPlanDetails(planId) {
 
 async function editPlan(planId) {
   try {
-    const response = await fetch(`${window.appConfig.endpoints.plans}/${planId}`);
+    const response = await fetchWithAuth(`${window.appConfig.endpoints.plans}/${planId}`);
     if (!response.ok) throw new Error("Failed to fetch plan details");
 
     const plan = await response.json();
@@ -1562,7 +1560,7 @@ async function deletePlan(planId) {
   if (!confirm("Are you sure you want to delete this plan?")) return;
 
   try {
-    const response = await fetch(`${window.appConfig.endpoints.plans}/${planId}`, {
+    const response = await fetchWithAuth(`${window.appConfig.endpoints.plans}/${planId}`, {
       method: "DELETE",
     });
 
