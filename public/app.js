@@ -1003,7 +1003,7 @@ async function editVisit(visitId) {
   }
 }
 
-async function loadLandmarks() {
+async function loadLandmarks(clearMarkers = true) {
   try {
     // Make sure the map is initialized first
     if (!mapInitialized) {
@@ -1016,24 +1016,31 @@ async function loadLandmarks() {
     const landmarks = await response.json();
     document.getElementById("landmarkList").innerHTML = "";
 
-    // Clear existing markers before adding new ones
-    if (markers.length > 0) {
+    // Clear existing markers before adding new ones, but only if requested
+    if (clearMarkers && markers.length > 0) {
       markers.forEach((marker) => map.removeLayer(marker.marker));
       markers = [];
     }
 
     // Add landmarks to list and map
     landmarks.reverse().forEach((landmark) => {
-      addMarkerToMap(landmark);
+      // Marker'ı ekle (eğer zaten yoksa)
+      if (!markers.some(m => m.id === landmark._id)) {
+        addMarkerToMap(landmark);
+      }
+      
+      // Listeleri güncelle
       addLandmarkToList(landmark);
     });
+    
+    return landmarks;
   } catch (error) {
     console.error("Error loading landmarks:", error);
     alert("Failed to load landmarks. Please refresh the page.");
+    return [];
   }
 }
 
-// Update the loadVisitedLandmarks function to ensure map persistence
 async function loadVisitedLandmarks() {
   try {
     // Make sure the map is initialized first
@@ -1041,12 +1048,19 @@ async function loadVisitedLandmarks() {
       initMap();
     }
 
+    // Önce tüm landmarkları yükle (veya yüklenmiş durumda tut)
+    await loadLandmarks(false); // false parametresi markers'ı temizlememesi için
+
     const response = await fetchWithAuth(window.appConfig.endpoints.visited);
     if (!response.ok) throw new Error("Failed to load visited landmarks");
 
     const visited = await response.json();
     const visitedList = document.getElementById("visitedList");
-    visitedList.innerHTML = visited
+    
+    // Filter out any visits with missing landmark references
+    const validVisits = visited.filter(visit => visit.landmark_id && visit.landmark_id.name);
+    
+    visitedList.innerHTML = validVisits
       .map(
         (visit) => `
             <div class="visited-record">
@@ -1112,63 +1126,282 @@ async function loadVisitedLandmarks() {
       )
       .join("");
 
-    // Update markers on map
-    if (markers.length > 0) {
-      markers.forEach((marker) => map.removeLayer(marker.marker));
-      markers = [];
-    }
-
-    visited.forEach((visit) => {
+    // Visited olarak işaretlenmiş landmarkların popuplarını güncelle
+    validVisits.forEach((visit) => {
       const landmark = visit.landmark_id;
-      const marker = L.marker([
-        landmark.location.latitude,
-        landmark.location.longitude,
-      ]).addTo(map);
-
-      // Create a richer popup with more information and better styling
-      const popupContent = `
-        <div class="landmark-popup">
-          <h4>${landmark.name}</h4>
-          <div class="popup-detail">
-            <strong>Category:</strong> ${landmark.category}
+      const existingMarker = markers.find(m => m.id === landmark._id);
+      
+      if (existingMarker) {
+        // Marker zaten varsa, popup içeriğini ziyaret bilgileriyle güncelle
+        const popupContent = `
+          <div class="landmark-popup">
+            <h4>${landmark.name}</h4>
+            <div class="popup-detail">
+              <strong>Category:</strong> ${landmark.category}
+            </div>
+            <div class="popup-detail">
+              <strong>Rating:</strong> ${"★".repeat(visit.rating)}${"☆".repeat(
+          5 - visit.rating
+        )}
+            </div>
+            <div class="popup-detail">
+              <strong>Visited:</strong> ${new Date(
+                visit.visited_date
+              ).toLocaleDateString()}
+            </div>
+            <div class="popup-detail">
+              <strong>Visitor:</strong> ${visit.visitor_name}
+            </div>
+            ${
+              visit.notes
+                ? `<div class="popup-detail"><strong>Notes:</strong> ${visit.notes}</div>`
+                : ""
+            }
           </div>
-          <div class="popup-detail">
-            <strong>Rating:</strong> ${"★".repeat(visit.rating)}${"☆".repeat(
-        5 - visit.rating
-      )}
-          </div>
-          <div class="popup-detail">
-            <strong>Visited:</strong> ${new Date(
-              visit.visited_date
-            ).toLocaleDateString()}
-          </div>
-          <div class="popup-detail">
-            <strong>Visitor:</strong> ${visit.visitor_name}
-          </div>
-          ${
-            visit.notes
-              ? `<div class="popup-detail"><strong>Notes:</strong> ${visit.notes}</div>`
-              : ""
-          }
-        </div>
-      `;
-
-      marker.bindPopup(popupContent);
-
-      // Always open popup on hover
-      marker.on("mouseover", function () {
-        this.openPopup();
-      });
-
-      marker.on("mouseout", function () {
-        this.closePopup();
-      });
-
-      markers.push({ id: landmark._id, marker, name: landmark.name });
+        `;
+        
+        existingMarker.marker.setPopupContent(popupContent);
+        
+        // Özelliklerini güncelle
+        existingMarker.isVisited = true;
+        existingMarker.visitInfo = visit;
+      }
     });
+    
+    // Display a notice if there were invalid visits
+    if (visited.length > validVisits.length) {
+      console.warn(`${visited.length - validVisits.length} visits were skipped due to missing landmark references.`);
+      
+      // Add a notice to the top of the list if there were invalid visits
+      if (visitedList.innerHTML) {
+        visitedList.innerHTML = `
+          <div class="alert alert-warning">
+            Some visits couldn't be displayed because they reference deleted landmarks.
+          </div>
+        ` + visitedList.innerHTML;
+      }
+    }
+    
   } catch (error) {
     console.error("Error loading visited landmarks:", error);
     alert("Failed to load visited landmarks.");
+  }
+}
+
+async function loadPlans() {
+  try {
+    // Make sure the map is initialized first
+    if (!mapInitialized) {
+      initMap();
+    }
+    
+    // Önce tüm landmarkları yükle (veya yüklenmiş durumda tut)
+    await loadLandmarks(false); // false parametresi markers'ı temizlememesi için
+
+    const response = await fetchWithAuth(window.appConfig.endpoints.plans);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Server response:", response.status, errorText);
+      throw new Error(`Failed to load plans: ${response.status} ${errorText}`);
+    }
+
+    const plans = await response.json();
+    const plansList = document.getElementById("plansList");
+
+    // Plan landmarkların stillerini ve popup içeriklerini güncelle
+    let processedPlanLandmarks = [];
+    
+    plans.forEach((plan) => {
+      plan.landmarks.forEach((item) => {
+        if (
+          item.landmark_id && 
+          !processedPlanLandmarks.some((l) => l === item.landmark_id._id)
+        ) {
+          processedPlanLandmarks.push(item.landmark_id._id);
+          
+          // Varolan bir landmark markeri bul
+          const existingMarker = markers.find(m => m.id === item.landmark_id._id);
+          
+          if (existingMarker) {
+            // Markerı plan stiline güncelle
+            existingMarker.marker.setIcon(L.divIcon({
+              className: "plan-landmark-marker",
+              html: '<div class="plan-marker-inner"></div>',
+              iconSize: [24, 24],
+            }));
+            
+            // Plan popup içeriğini güncelle
+            const popupContent = `
+              <div class="landmark-popup plan-popup">
+                <h4>${item.landmark_id.name}</h4>
+                <div class="popup-detail">
+                  <strong>Category:</strong> ${item.landmark_id.category}
+                </div>
+                <div class="popup-detail">
+                  <strong>In Plans:</strong> ${plans
+                    .filter((p) =>
+                      p.landmarks.some((l) => l.landmark_id && l.landmark_id._id === item.landmark_id._id)
+                    )
+                    .map((p) => p.name)
+                    .join(", ")}
+                </div>
+                ${
+                  item.landmark_id.description
+                    ? `<div class="popup-detail">
+                    <strong>Description:</strong> ${item.landmark_id.description}
+                  </div>`
+                    : ""
+                }
+                <div class="popup-detail">
+                  <strong>Location:</strong> ${item.landmark_id.location.latitude.toFixed(
+                    6
+                  )}, ${item.landmark_id.location.longitude.toFixed(6)}
+                </div>
+                ${
+                  item.notes
+                    ? `<div class="popup-detail">
+                    <strong>Plan Notes:</strong> ${item.notes}
+                  </div>`
+                    : ""
+                }
+              </div>
+            `;
+            
+            existingMarker.marker.setPopupContent(popupContent);
+            existingMarker.isInPlan = true;
+          }
+        }
+      });
+    });
+
+    // Now render the plans list
+    plansList.innerHTML = plans
+      .map((plan) => {
+        try {
+          // Filter out any invalid landmark references
+          const validLandmarks = plan.landmarks.filter(item => 
+            item.landmark_id && item.landmark_id._id && item.landmark_id.name
+          );
+          
+          // Count any missing landmarks
+          const missingLandmarksCount = plan.landmarks.length - validLandmarks.length;
+          
+          const startDateStr = plan.planned_date
+            ? plan.planned_date.split("T")[0]
+            : null;
+          const endDateStr = plan.end_date ? plan.end_date.split("T")[0] : null;
+
+          if (!startDateStr) {
+            throw new Error("Start date is missing");
+          }
+
+          const [startYear, startMonth, startDay] = startDateStr
+            .split("-")
+            .map(Number);
+          const startDate = new Date(startYear, startMonth - 1, startDay);
+
+          let endDate = null;
+          let diffDays = 1;
+
+          if (endDateStr) {
+            const [endYear, endMonth, endDay] = endDateStr
+              .split("-")
+              .map(Number);
+            endDate = new Date(endYear, endMonth - 1, endDay);
+
+            if (!isNaN(endDate.getTime())) {
+              const diffTime = Math.abs(
+                endDate.getTime() - startDate.getTime()
+              );
+              diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            }
+          }
+
+          return `
+                    <div class="plan-card" id="plan-${plan._id}">
+                        <h5>${plan.name}</h5>
+                        <div class="date-range">
+                            <i class="fas fa-calendar-alt"></i>
+                            ${startDate.toLocaleDateString("tr-TR")} - 
+                            ${
+                              endDate
+                                ? endDate.toLocaleDateString("tr-TR")
+                                : "Belirtilmemiş"
+                            }
+                            <span class="badge ms-2">${diffDays} gün</span>
+                        </div>
+                        
+                        <div class="landmarks-list">
+                            <strong><i class="fas fa-map-marker-alt"></i> Landmarks:</strong> 
+                            ${validLandmarks
+                              .map((item) => item.landmark_id.name)
+                              .join(", ")}
+                              ${missingLandmarksCount > 0 ? 
+                              `<div class="text-warning">(${missingLandmarksCount} deleted landmark${missingLandmarksCount > 1 ? 's' : ''})</div>` : 
+                              ''}
+                        </div>
+                        
+                        ${
+                          plan.notes
+                            ? `
+                        <div class="plan-notes">
+                            <strong><i class="fas fa-sticky-note"></i> Plan Notes:</strong> 
+                            <p class="mt-1 mb-0">${plan.notes}</p>
+                        </div>
+                        `
+                            : ""
+                        }
+                        
+                        <div class="landmark-actions">
+                            <button class="btn btn-info btn-sm" onclick="showPlanDetails('${
+                              plan._id
+                            }')">
+                                <i class="fas fa-info-circle"></i> Details
+                            </button>
+                            <button class="btn btn-warning btn-sm" onclick="editPlan('${
+                              plan._id
+                            }')">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deletePlan('${
+                              plan._id
+                            }')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+        } catch (error) {
+          return `
+                    <div class="plan-card" id="plan-${plan._id}">
+                        <h5>${plan.name}</h5>
+                        <div class="alert alert-danger">
+                            Error loading plan details: ${error.message}
+                            <br>
+                            <small>Start Date: ${
+                              plan.planned_date || "Not set"
+                            }</small>
+                            <br>
+                            <small>End Date: ${
+                              plan.end_date || "Not set"
+                            }</small>
+                        </div>
+                    </div>
+                `;
+        }
+      })
+      .join("");
+  } catch (error) {
+    console.error("Error in loadPlans:", error);
+    const plansList = document.getElementById("plansList");
+    plansList.innerHTML = `
+            <div class="alert alert-danger">
+                Failed to load plans. Please try again later.
+                <br>
+                Error: ${error.message}
+            </div>
+        `;
   }
 }
 
@@ -1411,220 +1644,6 @@ document
       alert(error.message || "Failed to save plan. Please try again.");
     }
   });
-
-async function loadPlans() {
-  try {
-    // Make sure the map is initialized first
-    if (!mapInitialized) {
-      initMap();
-    }
-
-    const response = await fetchWithAuth(window.appConfig.endpoints.plans);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Server response:", response.status, errorText);
-      throw new Error(`Failed to load plans: ${response.status} ${errorText}`);
-    }
-
-    const plans = await response.json();
-    const plansList = document.getElementById("plansList");
-
-    // Clear existing markers before adding plan landmarks to the map
-    if (markers.length > 0) {
-      markers.forEach((marker) => map.removeLayer(marker.marker));
-      markers = [];
-    }
-
-    // Add all plan landmarks to the map
-    let allPlanLandmarks = [];
-    plans.forEach((plan) => {
-      plan.landmarks.forEach((item) => {
-        if (
-          item.landmark_id &&
-          !allPlanLandmarks.some((l) => l._id === item.landmark_id._id)
-        ) {
-          allPlanLandmarks.push(item.landmark_id);
-        }
-      });
-    });
-
-    // Add markers for plan landmarks
-    allPlanLandmarks.forEach((landmark) => {
-      // Create marker with plan-specific styling
-      const marker = L.marker(
-        [landmark.location.latitude, landmark.location.longitude],
-        {
-          icon: L.divIcon({
-            className: "plan-landmark-marker",
-            html: '<div class="plan-marker-inner"></div>',
-            iconSize: [24, 24],
-          }),
-        }
-      ).addTo(map);
-
-      // Create a rich popup for the plan landmark
-      const popupContent = `
-        <div class="landmark-popup plan-popup">
-          <h4>${landmark.name}</h4>
-          <div class="popup-detail">
-            <strong>Category:</strong> ${landmark.category}
-          </div>
-          <div class="popup-detail">
-            <strong>In Plans:</strong> ${plans
-              .filter((p) =>
-                p.landmarks.some((l) => l.landmark_id._id === landmark._id)
-              )
-              .map((p) => p.name)
-              .join(", ")}
-          </div>
-          ${
-            landmark.description
-              ? `<div class="popup-detail">
-              <strong>Description:</strong> ${landmark.description}
-            </div>`
-              : ""
-          }
-          <div class="popup-detail">
-            <strong>Location:</strong> ${landmark.location.latitude.toFixed(
-              6
-            )}, ${landmark.location.longitude.toFixed(6)}
-          </div>
-        </div>
-      `;
-
-      marker.bindPopup(popupContent);
-
-      // Show popup on hover
-      marker.on("mouseover", function () {
-        this.openPopup();
-      });
-
-      marker.on("mouseout", function () {
-        this.closePopup();
-      });
-
-      markers.push({ id: landmark._id, marker, name: landmark.name });
-    });
-
-    // Now render the plans list
-    plansList.innerHTML = plans
-      .map((plan) => {
-        try {
-          const startDateStr = plan.planned_date
-            ? plan.planned_date.split("T")[0]
-            : null;
-          const endDateStr = plan.end_date ? plan.end_date.split("T")[0] : null;
-
-          if (!startDateStr) {
-            throw new Error("Start date is missing");
-          }
-
-          const [startYear, startMonth, startDay] = startDateStr
-            .split("-")
-            .map(Number);
-          const startDate = new Date(startYear, startMonth - 1, startDay);
-
-          let endDate = null;
-          let diffDays = 1;
-
-          if (endDateStr) {
-            const [endYear, endMonth, endDay] = endDateStr
-              .split("-")
-              .map(Number);
-            endDate = new Date(endYear, endMonth - 1, endDay);
-
-            if (!isNaN(endDate.getTime())) {
-              const diffTime = Math.abs(
-                endDate.getTime() - startDate.getTime()
-              );
-              diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            }
-          }
-
-          return `
-                    <div class="plan-card" id="plan-${plan._id}">
-                        <h5>${plan.name}</h5>
-                        <div class="date-range">
-                            <i class="fas fa-calendar-alt"></i>
-                            ${startDate.toLocaleDateString("tr-TR")} - 
-                            ${
-                              endDate
-                                ? endDate.toLocaleDateString("tr-TR")
-                                : "Belirtilmemiş"
-                            }
-                            <span class="badge ms-2">${diffDays} gün</span>
-                        </div>
-                        
-                        <div class="landmarks-list">
-                            <strong><i class="fas fa-map-marker-alt"></i> Landmarks:</strong> 
-                            ${plan.landmarks
-                              .map((item) => item.landmark_id.name)
-                              .join(", ")}
-                        </div>
-                        
-                        ${
-                          plan.notes
-                            ? `
-                        <div class="plan-notes">
-                            <strong><i class="fas fa-sticky-note"></i> Plan Notes:</strong> 
-                            <p class="mt-1 mb-0">${plan.notes}</p>
-                        </div>
-                        `
-                            : ""
-                        }
-                        
-                        <div class="landmark-actions">
-                            <button class="btn btn-info btn-sm" onclick="showPlanDetails('${
-                              plan._id
-                            }')">
-                                <i class="fas fa-info-circle"></i> Details
-                            </button>
-                            <button class="btn btn-warning btn-sm" onclick="editPlan('${
-                              plan._id
-                            }')">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="deletePlan('${
-                              plan._id
-                            }')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
-                    </div>
-                `;
-        } catch (error) {
-          return `
-                    <div class="plan-card" id="plan-${plan._id}">
-                        <h5>${plan.name}</h5>
-                        <div class="alert alert-danger">
-                            Error loading plan details: ${error.message}
-                            <br>
-                            <small>Start Date: ${
-                              plan.planned_date || "Not set"
-                            }</small>
-                            <br>
-                            <small>End Date: ${
-                              plan.end_date || "Not set"
-                            }</small>
-                        </div>
-                    </div>
-                `;
-        }
-      })
-      .join("");
-  } catch (error) {
-    console.error("Error in loadPlans:", error);
-    const plansList = document.getElementById("plansList");
-    plansList.innerHTML = `
-            <div class="alert alert-danger">
-                Failed to load plans. Please try again later.
-                <br>
-                Error: ${error.message}
-            </div>
-        `;
-  }
-}
 
 async function showPlanDetails(planId) {
   try {
