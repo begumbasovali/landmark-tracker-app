@@ -243,7 +243,6 @@ function initializeApp() {
   // Load data
   loadLandmarks();
   loadVisitedLandmarks();
-  loadPlans();
 
   // Initialize search and filter functionality
   initSearchAndFilter();
@@ -1174,8 +1173,9 @@ async function loadVisitedLandmarks() {
 }
 
 // Initialize
-loadLandmarks();
-loadVisitedLandmarks();
+// Don't load data immediately - wait for authentication
+//loadLandmarks();
+//loadVisitedLandmarks();
 
 // Tab switching handlers
 document.querySelectorAll('a[data-bs-toggle="tab"]').forEach((tab) => {
