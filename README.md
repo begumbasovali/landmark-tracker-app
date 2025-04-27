@@ -228,4 +228,4 @@ This ensures privacy and a personalized experience for each user.
 - The application is designed to work on modern web browsers with JavaScript enabled
 - The app now uses dynamic API URLs for seamless deployment to any environment
 - User-specific content filtering ensures privacy and data separation between users
-- For additional project references, check the projectlink.txt file
+  
