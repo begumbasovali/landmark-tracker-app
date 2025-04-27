@@ -5,6 +5,11 @@ const landmarkSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     location: {
         latitude: {
             type: Number,
@@ -37,4 +42,4 @@ const landmarkSchema = new mongoose.Schema({
     }
 });
 
-module.exports = mongoose.model('Landmark', landmarkSchema); 
+module.exports = mongoose.model('Landmark', landmarkSchema);

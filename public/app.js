@@ -248,7 +248,7 @@ function initSearchAndFilter() {
   // Function to fetch and store all landmarks
   async function fetchLandmarksForSearch() {
     try {
-      const response = await fetch(window.appConfig.endpoints.landmarks);
+      const response = await fetchWithAuth(window.appConfig.endpoints.landmarks);
       if (!response.ok) throw new Error("Failed to load landmarks");
       storedLandmarks = await response.json();
     } catch (error) {
@@ -370,7 +370,7 @@ function initSearchAndFilter() {
 // Helper function to reload all landmarks
 async function reloadLandmarks() {
   try {
-    const response = await fetch(window.appConfig.endpoints.landmarks);
+    const response = await fetchWithAuth(window.appConfig.endpoints.landmarks);
     if (!response.ok) throw new Error("Failed to load landmarks");
 
     const landmarks = await response.json();
@@ -481,7 +481,7 @@ document
         ? `${window.appConfig.endpoints.landmarks}/${landmarkId}`
         : window.appConfig.endpoints.landmarks;
 
-      const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: landmarkId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1308,7 +1308,7 @@ document
 
 async function loadPlans() {
   try {
-    const response = await fetch(window.appConfig.endpoints.plans);
+    const response = await fetchWithAuth(window.appConfig.endpoints.plans);
 
     if (!response.ok) {
       const errorText = await response.text();

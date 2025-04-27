@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Landmark = require('../models/Landmark');
+const auth = require('../middleware/auth');
 
-// GET all landmarks
+// Tüm rotaları auth middleware'i ile korumalıyız
+router.use(auth);
+
+// GET all landmarks for the authenticated user
 router.get('/', async (req, res) => {
     try {
-        const landmarks = await Landmark.find();
+        const landmarks = await Landmark.find({ user: req.user.id });
         res.json(landmarks);
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch landmarks' });
@@ -17,6 +21,12 @@ router.get('/:id', async (req, res) => {
     try {
         const landmark = await Landmark.findById(req.params.id);
         if (!landmark) return res.status(404).json({ message: 'Landmark not found' });
+        
+        // Kullanıcı sadece kendi landmark'larına erişebilmeli
+        if (landmark.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized to access this landmark' });
+        }
+        
         res.json(landmark);
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch landmark' });
@@ -37,6 +47,7 @@ router.post('/', async (req, res) => {
 
         const landmark = new Landmark({
             name: req.body.name,
+            user: req.user.id, // Kullanıcı ID'sini ekle
             location: {
                 latitude: req.body.location.latitude,
                 longitude: req.body.location.longitude
@@ -66,6 +77,11 @@ router.put('/:id', async (req, res) => {
         const landmark = await Landmark.findById(req.params.id);
         if (!landmark) return res.status(404).json({ message: 'Landmark not found' });
 
+        // Kullanıcı sadece kendi landmark'larını güncelleyebilmeli
+        if (landmark.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized to update this landmark' });
+        }
+
         if (req.body.name) landmark.name = req.body.name;
         if (req.body.location) landmark.location = req.body.location;
         if (req.body.description) landmark.description = req.body.description;
@@ -91,6 +107,11 @@ router.delete('/:id', async (req, res) => {
         const landmark = await Landmark.findById(req.params.id);
         if (!landmark) return res.status(404).json({ message: 'Landmark not found' });
         
+        // Kullanıcı sadece kendi landmark'larını silebilmeli
+        if (landmark.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized to delete this landmark' });
+        }
+        
         await Landmark.deleteOne({ _id: req.params.id });
         res.json({ message: 'Landmark deleted successfully' });
     } catch (err) {
@@ -98,4 +119,4 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-module.exports = router; 
+module.exports = router;
