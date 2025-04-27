@@ -234,6 +234,7 @@ async function fetchWithAuth(url, options = {}) {
 // Initialize search and filter functionality
 function initSearchAndFilter() {
   const searchInput = document.getElementById("searchLandmark");
+  const searchIcon = document.querySelector(".fa-search");
   const searchButton = document.getElementById("searchButton");
   const categoryFilter = document.getElementById("categoryFilter");
 
@@ -324,18 +325,35 @@ function initSearchAndFilter() {
     });
   }
 
-  // Event listener for search button
-  if (searchButton) {
-    searchButton.addEventListener("click", function () {
+  // Event listener for search icon click
+  if (searchIcon) {
+    searchIcon.addEventListener("click", function() {
       currentSearchTerm = searchInput.value.trim();
       filterLandmarks();
     });
   }
 
-  // Event listener for search input (search as you type)
+  // Event listener for Enter key in search input
   if (searchInput) {
-    searchInput.addEventListener("input", function () {
+    searchInput.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        currentSearchTerm = this.value.trim();
+        filterLandmarks();
+        e.preventDefault();
+      }
+    });
+    
+    // Also keep the existing input event for real-time filtering
+    searchInput.addEventListener("input", function() {
       currentSearchTerm = this.value.trim();
+      filterLandmarks();
+    });
+  }
+
+  // Keep the existing button click event as fallback
+  if (searchButton) {
+    searchButton.addEventListener("click", function() {
+      currentSearchTerm = searchInput.value.trim();
       filterLandmarks();
     });
   }
