@@ -25,10 +25,10 @@ const successToast = new bootstrap.Toast(
 // Function to initialize map (called only once)
 function initMap() {
   if (mapInitialized) return;
-  
+
   console.log("Initializing map...");
   map = L.map("map").setView([39, 35], 6); // Centered on Turkey
-  
+
   // Use a faster tile server and preload nearby tiles
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors",
@@ -61,7 +61,7 @@ function initMap() {
       6
     )}, Longitude: ${e.latlng.lng.toFixed(6)}`;
   });
-  
+
   mapInitialized = true;
 }
 
@@ -251,19 +251,32 @@ function initializeApp() {
 
 // Add auth header to fetch calls
 async function fetchWithAuth(url, options = {}) {
-  // Tüm isteklerin auth token'ına sahip olmasını sağlayalım
+  // Get authentication token
+  const token = AuthService.getToken();
+  
+  // Set headers for the request
   const headers = {
     ...(options.headers || {}),
-    "x-auth-token": AuthService.getToken(),
     "Content-Type": "application/json"
   };
+  
+  // Only add auth token if it exists
+  if (token) {
+    headers["x-auth-token"] = token;
+    
+    // Debug log - only show part of token if it exists
+    console.log(`API request: ${url}`, {
+      headers: headers,
+      token: token.substring(0, 15) + "..." // Only truncate if token exists
+    });
+  } else {
+    console.log(`API request without auth token: ${url}`);
+    // If no token, show auth container since user is not logged in
+    showAuth();
+    throw new Error("Authentication required. Please log in.");
+  }
 
-  // Debug amaçlı log
-  console.log(`API isteği: ${url}`, {
-    headers: headers,
-    token: AuthService.getToken().substring(0, 15) + "..." // Token'ın bir kısmını göster
-  });
-
+  // Make the API request
   const response = await fetch(url, {
     ...options,
     headers,
@@ -296,7 +309,9 @@ function initSearchAndFilter() {
   // Function to fetch and store all landmarks
   async function fetchLandmarksForSearch() {
     try {
-      const response = await fetchWithAuth(window.appConfig.endpoints.landmarks);
+      const response = await fetchWithAuth(
+        window.appConfig.endpoints.landmarks
+      );
       if (!response.ok) throw new Error("Failed to load landmarks");
       storedLandmarks = await response.json();
     } catch (error) {
@@ -368,7 +383,7 @@ function initSearchAndFilter() {
 
   // Event listener for search icon click
   if (searchIcon) {
-    searchIcon.addEventListener("click", function() {
+    searchIcon.addEventListener("click", function () {
       currentSearchTerm = searchInput.value.trim();
       filterLandmarks();
     });
@@ -376,16 +391,16 @@ function initSearchAndFilter() {
 
   // Event listener for Enter key in search input
   if (searchInput) {
-    searchInput.addEventListener("keypress", function(e) {
+    searchInput.addEventListener("keypress", function (e) {
       if (e.key === "Enter") {
         currentSearchTerm = this.value.trim();
         filterLandmarks();
         e.preventDefault();
       }
     });
-    
+
     // Also keep the existing input event for real-time filtering
-    searchInput.addEventListener("input", function() {
+    searchInput.addEventListener("input", function () {
       currentSearchTerm = this.value.trim();
       filterLandmarks();
     });
@@ -393,7 +408,7 @@ function initSearchAndFilter() {
 
   // Keep the existing button click event as fallback
   if (searchButton) {
-    searchButton.addEventListener("click", function() {
+    searchButton.addEventListener("click", function () {
       currentSearchTerm = searchInput.value.trim();
       filterLandmarks();
     });
@@ -538,31 +553,41 @@ function addMarkerToMap(landmark) {
       <div class="popup-detail">
         <strong>Category:</strong> ${landmark.category}
       </div>
-      ${landmark.description ? 
-        `<div class="popup-detail">
+      ${
+        landmark.description
+          ? `<div class="popup-detail">
           <strong>Description:</strong> ${landmark.description}
-        </div>` : ''}
+        </div>`
+          : ""
+      }
       <div class="popup-detail">
-        <strong>Location:</strong> ${landmark.location.latitude.toFixed(6)}, ${landmark.location.longitude.toFixed(6)}
+        <strong>Location:</strong> ${landmark.location.latitude.toFixed(
+          6
+        )}, ${landmark.location.longitude.toFixed(6)}
       </div>
-      ${landmark.notes && landmark.notes.length > 0 ? 
-        `<div class="popup-detail">
+      ${
+        landmark.notes && landmark.notes.length > 0
+          ? `<div class="popup-detail">
           <strong>Notes:</strong> ${landmark.notes[0].content}
-        </div>` : ''}
+        </div>`
+          : ""
+      }
     </div>
   `;
 
   const marker = L.marker([
     landmark.location.latitude,
     landmark.location.longitude,
-  ]).addTo(map).bindPopup(popupContent);
+  ])
+    .addTo(map)
+    .bindPopup(popupContent);
 
   // Always show popup on hover
-  marker.on("mouseover", function() {
+  marker.on("mouseover", function () {
     this.openPopup();
   });
 
-  marker.on("mouseout", function() {
+  marker.on("mouseout", function () {
     this.closePopup();
   });
 
@@ -776,7 +801,9 @@ async function showLandmarkDetails(landmarkId) {
 
 async function editLandmark(id) {
   try {
-    const response = await fetchWithAuth(`${window.appConfig.endpoints.landmarks}/${id}`);
+    const response = await fetchWithAuth(
+      `${window.appConfig.endpoints.landmarks}/${id}`
+    );
     if (!response.ok) throw new Error("Failed to fetch landmark");
 
     const landmark = await response.json();
@@ -806,9 +833,12 @@ async function deleteLandmark(id) {
   if (!confirm("Are you sure you want to delete this landmark?")) return;
 
   try {
-    const response = await fetchWithAuth(`${window.appConfig.endpoints.landmarks}/${id}`, {
-      method: "DELETE",
-    });
+    const response = await fetchWithAuth(
+      `${window.appConfig.endpoints.landmarks}/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (!response.ok) throw new Error("Failed to delete landmark");
 
@@ -980,19 +1010,19 @@ async function loadLandmarks() {
     if (!mapInitialized) {
       initMap();
     }
-    
+
     const response = await fetchWithAuth(window.appConfig.endpoints.landmarks);
     if (!response.ok) throw new Error("Failed to load landmarks");
 
     const landmarks = await response.json();
     document.getElementById("landmarkList").innerHTML = "";
-    
+
     // Clear existing markers before adding new ones
     if (markers.length > 0) {
       markers.forEach((marker) => map.removeLayer(marker.marker));
       markers = [];
     }
-    
+
     // Add landmarks to list and map
     landmarks.reverse().forEach((landmark) => {
       addMarkerToMap(landmark);
@@ -1011,7 +1041,7 @@ async function loadVisitedLandmarks() {
     if (!mapInitialized) {
       initMap();
     }
-    
+
     const response = await fetchWithAuth(window.appConfig.endpoints.visited);
     if (!response.ok) throw new Error("Failed to load visited landmarks");
 
@@ -1095,7 +1125,7 @@ async function loadVisitedLandmarks() {
         landmark.location.latitude,
         landmark.location.longitude,
       ]).addTo(map);
-      
+
       // Create a richer popup with more information and better styling
       const popupContent = `
         <div class="landmark-popup">
@@ -1104,18 +1134,26 @@ async function loadVisitedLandmarks() {
             <strong>Category:</strong> ${landmark.category}
           </div>
           <div class="popup-detail">
-            <strong>Rating:</strong> ${"★".repeat(visit.rating)}${"☆".repeat(5 - visit.rating)}
+            <strong>Rating:</strong> ${"★".repeat(visit.rating)}${"☆".repeat(
+        5 - visit.rating
+      )}
           </div>
           <div class="popup-detail">
-            <strong>Visited:</strong> ${new Date(visit.visited_date).toLocaleDateString()}
+            <strong>Visited:</strong> ${new Date(
+              visit.visited_date
+            ).toLocaleDateString()}
           </div>
           <div class="popup-detail">
             <strong>Visitor:</strong> ${visit.visitor_name}
           </div>
-          ${visit.notes ? `<div class="popup-detail"><strong>Notes:</strong> ${visit.notes}</div>` : ''}
+          ${
+            visit.notes
+              ? `<div class="popup-detail"><strong>Notes:</strong> ${visit.notes}</div>`
+              : ""
+          }
         </div>
       `;
-      
+
       marker.bindPopup(popupContent);
 
       // Always open popup on hover
@@ -1197,9 +1235,12 @@ async function deleteVisit(visitId) {
   if (!confirm("Are you sure you want to delete this visit record?")) return;
 
   try {
-    const response = await fetchWithAuth(`${window.appConfig.endpoints.visited}/${visitId}`, {
-      method: "DELETE",
-    });
+    const response = await fetchWithAuth(
+      `${window.appConfig.endpoints.visited}/${visitId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (!response.ok) throw new Error("Failed to delete visit record");
 
@@ -1377,7 +1418,7 @@ async function loadPlans() {
     if (!mapInitialized) {
       initMap();
     }
-    
+
     const response = await fetchWithAuth(window.appConfig.endpoints.plans);
 
     if (!response.ok) {
@@ -1388,37 +1429,40 @@ async function loadPlans() {
 
     const plans = await response.json();
     const plansList = document.getElementById("plansList");
-    
+
     // Clear existing markers before adding plan landmarks to the map
     if (markers.length > 0) {
       markers.forEach((marker) => map.removeLayer(marker.marker));
       markers = [];
     }
-    
+
     // Add all plan landmarks to the map
     let allPlanLandmarks = [];
-    plans.forEach(plan => {
-      plan.landmarks.forEach(item => {
-        if (item.landmark_id && !allPlanLandmarks.some(l => l._id === item.landmark_id._id)) {
+    plans.forEach((plan) => {
+      plan.landmarks.forEach((item) => {
+        if (
+          item.landmark_id &&
+          !allPlanLandmarks.some((l) => l._id === item.landmark_id._id)
+        ) {
           allPlanLandmarks.push(item.landmark_id);
         }
       });
     });
-    
+
     // Add markers for plan landmarks
-    allPlanLandmarks.forEach(landmark => {
+    allPlanLandmarks.forEach((landmark) => {
       // Create marker with plan-specific styling
-      const marker = L.marker([
-        landmark.location.latitude,
-        landmark.location.longitude,
-      ], {
-        icon: L.divIcon({
-          className: 'plan-landmark-marker',
-          html: '<div class="plan-marker-inner"></div>',
-          iconSize: [24, 24]
-        })
-      }).addTo(map);
-      
+      const marker = L.marker(
+        [landmark.location.latitude, landmark.location.longitude],
+        {
+          icon: L.divIcon({
+            className: "plan-landmark-marker",
+            html: '<div class="plan-marker-inner"></div>',
+            iconSize: [24, 24],
+          }),
+        }
+      ).addTo(map);
+
       // Create a rich popup for the plan landmark
       const popupContent = `
         <div class="landmark-popup plan-popup">
@@ -1428,34 +1472,41 @@ async function loadPlans() {
           </div>
           <div class="popup-detail">
             <strong>In Plans:</strong> ${plans
-              .filter(p => p.landmarks.some(l => l.landmark_id._id === landmark._id))
-              .map(p => p.name)
+              .filter((p) =>
+                p.landmarks.some((l) => l.landmark_id._id === landmark._id)
+              )
+              .map((p) => p.name)
               .join(", ")}
           </div>
-          ${landmark.description ? 
-            `<div class="popup-detail">
+          ${
+            landmark.description
+              ? `<div class="popup-detail">
               <strong>Description:</strong> ${landmark.description}
-            </div>` : ''}
+            </div>`
+              : ""
+          }
           <div class="popup-detail">
-            <strong>Location:</strong> ${landmark.location.latitude.toFixed(6)}, ${landmark.location.longitude.toFixed(6)}
+            <strong>Location:</strong> ${landmark.location.latitude.toFixed(
+              6
+            )}, ${landmark.location.longitude.toFixed(6)}
           </div>
         </div>
       `;
-      
+
       marker.bindPopup(popupContent);
-      
+
       // Show popup on hover
-      marker.on("mouseover", function() {
+      marker.on("mouseover", function () {
         this.openPopup();
       });
-      
-      marker.on("mouseout", function() {
+
+      marker.on("mouseout", function () {
         this.closePopup();
       });
-      
+
       markers.push({ id: landmark._id, marker, name: landmark.name });
     });
-    
+
     // Now render the plans list
     plansList.innerHTML = plans
       .map((plan) => {
@@ -1577,7 +1628,9 @@ async function loadPlans() {
 
 async function showPlanDetails(planId) {
   try {
-    const response = await fetchWithAuth(`${window.appConfig.endpoints.plans}/${planId}`);
+    const response = await fetchWithAuth(
+      `${window.appConfig.endpoints.plans}/${planId}`
+    );
     if (!response.ok) throw new Error("Failed to fetch plan details");
 
     const plan = await response.json();
@@ -1659,7 +1712,9 @@ async function showPlanDetails(planId) {
 
 async function editPlan(planId) {
   try {
-    const response = await fetchWithAuth(`${window.appConfig.endpoints.plans}/${planId}`);
+    const response = await fetchWithAuth(
+      `${window.appConfig.endpoints.plans}/${planId}`
+    );
     if (!response.ok) throw new Error("Failed to fetch plan details");
 
     const plan = await response.json();
@@ -1701,9 +1756,12 @@ async function deletePlan(planId) {
   if (!confirm("Are you sure you want to delete this plan?")) return;
 
   try {
-    const response = await fetchWithAuth(`${window.appConfig.endpoints.plans}/${planId}`, {
-      method: "DELETE",
-    });
+    const response = await fetchWithAuth(
+      `${window.appConfig.endpoints.plans}/${planId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (!response.ok) throw new Error("Failed to delete plan");
 
