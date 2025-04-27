@@ -248,7 +248,7 @@ function initSearchAndFilter() {
   // Function to fetch and store all landmarks
   async function fetchLandmarksForSearch() {
     try {
-      const response = await fetch("http://localhost:5000/api/landmarks");
+      const response = await fetch(window.appConfig.endpoints.landmarks);
       if (!response.ok) throw new Error("Failed to load landmarks");
       storedLandmarks = await response.json();
     } catch (error) {
@@ -370,7 +370,7 @@ function initSearchAndFilter() {
 // Helper function to reload all landmarks
 async function reloadLandmarks() {
   try {
-    const response = await fetch("http://localhost:5000/api/landmarks");
+    const response = await fetch(window.appConfig.endpoints.landmarks);
     if (!response.ok) throw new Error("Failed to load landmarks");
 
     const landmarks = await response.json();
@@ -478,8 +478,8 @@ document
 
     try {
       const url = landmarkId
-        ? `http://localhost:5000/api/landmarks/${landmarkId}`
-        : "http://localhost:5000/api/landmarks";
+        ? `${window.appConfig.endpoints.landmarks}/${landmarkId}`
+        : window.appConfig.endpoints.landmarks;
 
       const response = await fetch(url, {
         method: landmarkId ? "PUT" : "POST",
@@ -649,7 +649,7 @@ function toggleNotes(notesId) {
 async function showLandmarkDetails(landmarkId) {
   try {
     const response = await fetch(
-      `http://localhost:5000/api/landmarks/${landmarkId}`
+      `${window.appConfig.endpoints.landmarks}/${landmarkId}`
     );
     if (!response.ok) throw new Error("Failed to fetch landmark details");
 
@@ -743,7 +743,7 @@ async function showLandmarkDetails(landmarkId) {
 
 async function editLandmark(id) {
   try {
-    const response = await fetch(`http://localhost:5000/api/landmarks/${id}`);
+    const response = await fetch(`${window.appConfig.endpoints.landmarks}/${id}`);
     if (!response.ok) throw new Error("Failed to fetch landmark");
 
     const landmark = await response.json();
@@ -773,7 +773,7 @@ async function deleteLandmark(id) {
   if (!confirm("Are you sure you want to delete this landmark?")) return;
 
   try {
-    const response = await fetch(`http://localhost:5000/api/landmarks/${id}`, {
+    const response = await fetch(`${window.appConfig.endpoints.landmarks}/${id}`, {
       method: "DELETE",
     });
 
@@ -876,8 +876,8 @@ document
 
     try {
       const url = visitId
-        ? `http://localhost:5000/api/visited/${visitId}`
-        : "http://localhost:5000/api/visited";
+        ? `${window.appConfig.endpoints.visited}/${visitId}`
+        : window.appConfig.endpoints.visited;
 
       const response = await fetch(url, {
         method: visitId ? "PUT" : "POST",
@@ -904,7 +904,7 @@ document
 async function editVisit(visitId) {
   try {
     const response = await fetch(
-      `http://localhost:5000/api/visited/${visitId}`
+      `${window.appConfig.endpoints.visited}/${visitId}`
     );
     if (!response.ok) throw new Error("Failed to fetch visit details");
 
@@ -943,7 +943,7 @@ async function editVisit(visitId) {
 
 async function loadLandmarks() {
   try {
-    const response = await fetch("http://localhost:5000/api/landmarks");
+    const response = await fetch(window.appConfig.endpoints.landmarks);
     if (!response.ok) throw new Error("Failed to load landmarks");
 
     const landmarks = await response.json();
@@ -960,7 +960,7 @@ async function loadLandmarks() {
 
 async function loadVisitedLandmarks() {
   try {
-    const response = await fetch("http://localhost:5000/api/visited");
+    const response = await fetch(window.appConfig.endpoints.visited);
     if (!response.ok) throw new Error("Failed to load visited landmarks");
 
     const visited = await response.json();
@@ -1130,7 +1130,7 @@ async function deleteVisit(visitId) {
 
   try {
     const response = await fetch(
-      `http://localhost:5000/api/visited/${visitId}`,
+      `${window.appConfig.endpoints.visited}/${visitId}`,
       {
         method: "DELETE",
       }
@@ -1164,7 +1164,7 @@ function showAddPlanModal() {
 
 async function loadLandmarksForPlan() {
   try {
-    const response = await fetch("http://localhost:5000/api/landmarks");
+    const response = await fetch(window.appConfig.endpoints.landmarks);
     if (!response.ok) throw new Error("Failed to load landmarks");
 
     const landmarks = await response.json();
@@ -1276,8 +1276,8 @@ document
       };
 
       const url = planId
-        ? `http://localhost:5000/api/plans/${planId}`
-        : "http://localhost:5000/api/plans";
+        ? `${window.appConfig.endpoints.plans}/${planId}`
+        : window.appConfig.endpoints.plans;
 
       const response = await fetch(url, {
         method: planId ? "PUT" : "POST",
@@ -1308,7 +1308,7 @@ document
 
 async function loadPlans() {
   try {
-    const response = await fetch("http://localhost:5000/api/plans");
+    const response = await fetch(window.appConfig.endpoints.plans);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -1438,7 +1438,7 @@ async function loadPlans() {
 
 async function showPlanDetails(planId) {
   try {
-    const response = await fetch(`http://localhost:5000/api/plans/${planId}`);
+    const response = await fetch(`${window.appConfig.endpoints.plans}/${planId}`);
     if (!response.ok) throw new Error("Failed to fetch plan details");
 
     const plan = await response.json();
@@ -1520,7 +1520,7 @@ async function showPlanDetails(planId) {
 
 async function editPlan(planId) {
   try {
-    const response = await fetch(`http://localhost:5000/api/plans/${planId}`);
+    const response = await fetch(`${window.appConfig.endpoints.plans}/${planId}`);
     if (!response.ok) throw new Error("Failed to fetch plan details");
 
     const plan = await response.json();
@@ -1562,7 +1562,7 @@ async function deletePlan(planId) {
   if (!confirm("Are you sure you want to delete this plan?")) return;
 
   try {
-    const response = await fetch(`http://localhost:5000/api/plans/${planId}`, {
+    const response = await fetch(`${window.appConfig.endpoints.plans}/${planId}`, {
       method: "DELETE",
     });
 
